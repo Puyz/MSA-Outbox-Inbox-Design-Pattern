@@ -4,6 +4,7 @@ namespace Shared.Events
 {
     public class OrderCreatedEvent
     {
+        public Guid IdempotentToken { get; set; }
         public long OrderId { get; set; }
         public long BuyerId { get; set; }
         public decimal TotalPrice { get; set; }

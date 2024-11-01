@@ -18,13 +18,17 @@ namespace Stock.API.Consumers
 
         public async Task Consume(ConsumeContext<OrderCreatedEvent> context)
         {
-            await _stockDbContext.OrderInboxes.AddAsync(new()
+            var result = await _stockDbContext.OrderInboxes.AnyAsync(i => i.IdempotentToken == context.Message.IdempotentToken);
+            if (!result)
             {
-                Processed = false,
-                Payload = JsonSerializer.Serialize(context.Message)
-            });
-            await _stockDbContext.SaveChangesAsync();
-
+                await _stockDbContext.OrderInboxes.AddAsync(new()
+                {
+                    IdempotentToken = context.Message.IdempotentToken,
+                    Processed = false,
+                    Payload = JsonSerializer.Serialize(context.Message)
+                });
+                await _stockDbContext.SaveChangesAsync();
+            }
 
             // Inbox için de bir worker Service (Quartz olabilir) oluşturmalıyız.
             List<OrderInbox> orderInboxes = await _stockDbContext.OrderInboxes.Where(i => i.Processed == false).ToListAsync();

@@ -53,8 +53,10 @@ app.MapPost("/create-order", async (CreateOrderDTO createOrder, OrderDbContext c
     await context.Orders.AddAsync(order);
     await context.SaveChangesAsync();
 
+    var idempotentToken = Guid.NewGuid();
     OrderCreatedEvent orderCreatedEvent = new()
     {
+        IdempotentToken = idempotentToken,
         OrderId = order.Id,
         BuyerId = createOrder.BuyerId,
         TotalPrice = createOrder.OrderItems.Sum(oi => oi.Price * oi.Count),
@@ -68,6 +70,7 @@ app.MapPost("/create-order", async (CreateOrderDTO createOrder, OrderDbContext c
 
     OrderOutbox orderOutbox = new()
     {
+        IdempotentToken = idempotentToken,
         OccuredOn = DateTime.UtcNow,
         Payload = JsonSerializer.Serialize(orderCreatedEvent),
         Type = nameof(OrderCreatedEvent)
